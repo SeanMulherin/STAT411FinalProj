@@ -1,10 +1,13 @@
 
+rm(list=ls())
 
 library(tidyverse)
 library(corrplot)
 library(caret)
 library(leaps)
 library(psych)
+library(pROC)
+library(factoextra)
 
 
 diab_df <- read.csv('diabetes.csv')
@@ -35,7 +38,7 @@ corr_ordered <- cor_mat[, 1] |> sort(decreasing = TRUE); print(corr_ordered)
 
 
 ############################################################################
-# 1. Linear Regression
+# 1. Logistic Regression
 ############################################################################
 set.seed(123)
 n <- nrow(diab_df)
@@ -45,21 +48,29 @@ test_df <- diab_df[-train_i, ]
 
 model <- glm(Diabetes_012 ~ ., data = train_df, family = 'binomial')
 summary(model)
-plot(model)
+#plot(model)
 
-pred <- predict(model, newdata = test_df)
-pred <- ifelse(pred > 0.5, 1, 0)
+pred <- predict(model, newdata = test_df, type = 'response')
+
+roc_plot <- roc(test_df$Diabetes_012, pred)
+plot(roc_plot, main = "ROC Curve", col="#2774AE", lwd=3)
+auc_val <- auc(roc_plot)
+legend("topleft", legend = paste("AUC =", round(auc_val, 3)), col = "#2774AE", lwd=2)
+
+optimal_thresh <- coords(roc_plot, "best", ret = "threshold", 
+                         best.method = "youden") |> as.numeric()
+cat("Optimal threshold =", optimal_thresh)
+
+pred <- ifelse(pred > optimal_thresh, 1, 0)
 pred <- factor(pred, levels = c(0, 1))
 observed <- factor(test_df$Diabetes_012, levels = c(0, 1))
-
 conf_matrix <- confusionMatrix(pred, observed, positive = '1')
 print(conf_matrix)
-
 
 model_subs <- regsubsets(diab_df[, -1], diab_df[, 1])
 rs <- summary(model_subs)
 plot(1:8, rs$rsq, main='n Predictors vs R Square',
-     xlab='# of Predictors', ylab = 'R Square')
+     xlab='# of Predictors', ylab = 'R Square', type='b')
 
 ############################################################################
 # 2. PCA
@@ -77,7 +88,18 @@ prop_table <- data.frame(
   ) |> arrange(desc(proportion_percent))
 
 prop_table
-eigen_vecs
+
+# nice way to plot the prop table
+pca_results <- prcomp(diab_df[, -1], scale. = TRUE)
+fviz_eig(pca_results, addlabels = TRUE, ylim = c(0, 20), 
+         main = "Scree Plot of Explained Variance vs PC")
+
+# Loadings for first 5 PC's
+corr_coeffs_table <- (eigen_vecs[, 1:10] %*% diag(sqrt(eigen_vals[1:10]))) |> round(3) |> data.frame()
+rownames(corr_coeffs_table) <- colnames(diab_df)[-1]
+colnames(corr_coeffs_table) <- c('PC1', 'PC2', 'PC3', 'PC4', 'PC5',
+                                 'PC6', 'PC7', 'PC8', 'PC9', 'PC10')
+corr_coeffs_table
 
 ############################################################################
 # 3. Factor Analysis
