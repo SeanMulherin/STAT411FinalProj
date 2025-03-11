@@ -12,7 +12,9 @@ library(factoextra)
 
 diab_df <- read.csv('diabetes.csv')
 diab_df$Diabetes_012 <- recode(diab_df$Diabetes_012, '2'=1) |> as.numeric()
-head(diab_df)
+diab_df$HvyAlcoholConsump <- recode(diab_df$HvyAlcoholConsump, '0'=1, '1'=0) |> as.numeric()
+
+View(diab_df)
 
 # Diabetes_012 is the response var, indicating risk level for developing Type 2 diab
 
