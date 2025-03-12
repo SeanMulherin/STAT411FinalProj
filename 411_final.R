@@ -11,10 +11,23 @@ library(factoextra)
 
 
 diab_df <- read.csv('diabetes.csv')
+
+#################################################################################
+# Wrangling - recode and normalize
+#################################################################################
+
 diab_df$Diabetes_012 <- recode(diab_df$Diabetes_012, '2'=1) |> as.numeric()
 diab_df$HvyAlcoholConsump <- recode(diab_df$HvyAlcoholConsump, '0'=1, '1'=0) |> as.numeric()
+diab_df$BMI <- ifelse(diab_df$BMI > median(diab_df$BMI), 1, 0)
+diab_df$GenHlth <- ifelse(diab_df$GenHlth > median(diab_df$GenHlth), 1, 0)
+diab_df$MentHlth <- ifelse(diab_df$MentHlth > median(diab_df$MentHlth), 1, 0)
+diab_df$PhysHlth <- ifelse(diab_df$PhysHlth > median(diab_df$PhysHlth), 1, 0)
+diab_df$Age <- ifelse(diab_df$Age > median(diab_df$Age), 1, 0)
+diab_df$Education <- ifelse(diab_df$Education > median(diab_df$Education), 1, 0)
+diab_df$Income <- ifelse(diab_df$Income > median(diab_df$Income), 1, 0)
 
-View(diab_df)
+# View(diab_df)
+
 
 # Diabetes_012 is the response var, indicating risk level for developing Type 2 diab
 
@@ -50,9 +63,9 @@ test_df <- diab_df[-train_i, ]
 
 model <- glm(Diabetes_012 ~ ., data = train_df, family = 'binomial')
 summary(model)
-#plot(model)
 
 pred <- predict(model, newdata = test_df, type = 'response')
+
 
 roc_plot <- roc(test_df$Diabetes_012, pred)
 plot(roc_plot, main = "ROC Curve", col="#2774AE", lwd=3)
@@ -71,8 +84,8 @@ print(conf_matrix)
 
 model_subs <- regsubsets(diab_df[, -1], diab_df[, 1])
 rs <- summary(model_subs)
-plot(1:8, rs$rsq, main='n Predictors vs R Square',
-     xlab='# of Predictors', ylab = 'R Square', type='b')
+plot(1:8, rs$adjr2, main='n Predictors vs R Square',
+     xlab='# of Predictors', ylab = 'adj R Square', type='b')
 
 ############################################################################
 # 2. PCA
